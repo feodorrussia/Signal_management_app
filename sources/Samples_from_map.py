@@ -112,10 +112,13 @@ def increasing_Rate_quadratic(values: np.array, new_n):
     return f(np.linspace(0, len(values), int(new_n)))
 
 
-def signal_augmentation(values, add_data, base_rate, new_speed, dxdy):
-
+def signal_augmentation(values, add_data, base_rate, dxdy, new_speed, new_rate=None):
     result = []
-    new_number = dxdy * len(values) * base_rate * 1e3 / new_speed
+
+    if new_rate is not None:
+        new_number = dxdy * len(values) * new_rate * 1e3 / new_speed
+    else:
+        new_number = dxdy * len(values) * base_rate * 1e3 / new_speed
     new_rate_values = increasing_Rate_quadratic(values, new_number)
 
     for v_i in range(1):
