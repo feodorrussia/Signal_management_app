@@ -94,42 +94,40 @@ def gen_Noise(data: np.array, mode: NoiseMode):
     return noise_data * data_noise_cof * d
 
 
-def increasing_Rate_quadratic(values: np.array, rate, new_rate):
+def increasing_Rate_quadratic(values: np.array, new_n):
     f = sc_i.interp1d(np.linspace(0, len(values), len(values)), values, kind="quadratic")
-    return f(np.linspace(0, len(values), int(new_rate / rate * len(values))))
+    return f(np.linspace(0, len(values), int(new_n)))
 
 
-def signal_augmentation(values, add_data, r_i):
-    base_rate = 5
-    base_speed = 27.65
-    rate_speed = {base_rate: base_speed}  # for the future
-
+def signal_augmentation(values, add_data, base_rate, dxdy, new_speed, new_rate=None):
     result = []
-    # for r_i in range(1, 51):
-    new_rate = base_rate * r_i / 2
-    new_speed = base_speed * m.log(r_i / 2 * m.e)
-    new_rate_values = increasing_Rate_quadratic(values, base_rate, new_rate)
+    new_number = dxdy * len(values) * base_rate * 1e3 / new_speed
+    new_rate_values = increasing_Rate_quadratic(values, new_number)
 
-    for v_i in range(10):
+    for v_i in range(1):
         noise_values = new_rate_values + gen_Noise(new_rate_values, mode=NoiseMode.low)
         # show_Signal(noise_values, t=1 / 5)
-        result.append([add_data[0], new_rate, new_speed, add_data[3][0], add_data[2][0], add_data[3][1], add_data[2][1],
-                       ' '.join(list(map(str, noise_values.real)))])
-    for v_i in range(10):
+        result.append(
+            [add_data[0], base_rate, new_speed, [add_data[3][0], add_data[2][0]], [add_data[3][1], add_data[2][1]],
+             noise_values.real])
+    for v_i in range(1):
         noise_values = new_rate_values + gen_Noise(new_rate_values, mode=NoiseMode.random)
         # show_Signal(noise_values, t=1 / 5)
-        result.append([add_data[0], new_rate, new_speed, add_data[3][0], add_data[2][0], add_data[3][1], add_data[2][1],
-                       ' '.join(list(map(str, noise_values.real)))])
-    for v_i in range(10):
+        result.append(
+            [add_data[0], base_rate, new_speed, [add_data[3][0], add_data[2][0]], [add_data[3][1], add_data[2][1]],
+             noise_values.real])  # ' '.join(list(map(str, noise_values.real)))
+    for v_i in range(1):
         noise_values = new_rate_values + gen_Noise(new_rate_values, mode=NoiseMode.high)
         # show_Signal(noise_values, t=1 / 5)
-        result.append([add_data[0], new_rate, new_speed, add_data[3][0], add_data[2][0], add_data[3][1], add_data[2][1],
-                       ' '.join(list(map(str, noise_values.real)))])
-    for v_i in range(30):
+        result.append(
+            [add_data[0], base_rate, new_speed, [add_data[3][0], add_data[2][0]], [add_data[3][1], add_data[2][1]],
+             noise_values.real])
+    for v_i in range(3):
         noise_values = new_rate_values + gen_Noise(new_rate_values, mode=NoiseMode.mix)
         # show_Signal(noise_values, t=1 / 5)
-        result.append([add_data[0], new_rate, new_speed, add_data[3][0], add_data[2][0], add_data[3][1], add_data[2][1],
-                       ' '.join(list(map(str, noise_values.real)))])
+        result.append(
+            [add_data[0], base_rate, new_speed, [add_data[3][0], add_data[2][0]], [add_data[3][1], add_data[2][1]],
+             noise_values.real])
     return result
 
 
@@ -251,9 +249,16 @@ if __name__ == '__main__':
                 if board_f:
                     if not os.path.isdir(path_db):
                         os.makedirs(path_db)
+
+                    speeds = np.logspace(0, 2, 10)
+                    speeds = speeds[(speeds < 50)]  # & (speeds > 16)
+                    speeds = np.append(speeds, [14, 14.8, 15.5, 16, 16.5, 17.2, 18, 50])
+                    speeds = speeds.round(2)
+                    speeds.sort()
+
                     with Pool(10) as p:
-                        p_signal_augmentation = partial(signal_augmentation, values_, add_data_)
-                        add_filaments = p.map(p_signal_augmentation, list(range(1, 16)))
+                        p_signal_augmentation = partial(signal_augmentation, values_, add_data_, 4, dx_map)
+                        add_filaments = p.map(p_signal_augmentation, speeds)
 
                     data_add = []
                     for el in add_filaments:
